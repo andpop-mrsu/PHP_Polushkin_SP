@@ -1,0 +1,24 @@
+{
+    "name": "erightt/gcd",
+    "description": "GCD Game",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "files": [
+            "src/Controller.php",
+            "src/View.php"
+        ]
+    },
+    "bin": [
+        "bin/gcd"
+    ],
+    "authors": [
+        {
+            "name": "Semyon Polushkin",
+            "email": "eright153@gmail.com"
+        }
+    ],
+    "require": {
+        "wp-cli/php-cli-tools": "^0.12.4"
+    }
+}
