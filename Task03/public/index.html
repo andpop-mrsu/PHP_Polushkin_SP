@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Наибольший общий делитель</title>
+    <style>
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; }
+        .hidden { display: none; }
+        .success { color: green; }
+        .error { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Форма игры -->
+        <div id="gameForm">
+            <h1>Найдите НОД двух чисел</h1>
+            <form id="gameForm" onsubmit="startGame(event)">
+                <div>
+                    <label>Ваше имя: 
+                        <input type="text" id="name" required>
+                    </label>
+                </div>
+                <div>
+                    <label>Число 1: <span id="num1"></span></label>
+                </div>
+                <div>
+                    <label>Число 2: <span id="num2"></span></label>
+                </div>
+                <div>
+                    <label>Ваш ответ: 
+                        <input type="number" id="answer" required>
+                    </label>
+                </div>
+                <button type="submit">Проверить</button>
+            </form>
+            <div id="result"></div>
+            <button onclick="showHistory()">Показать историю</button>
+        </div>
+
+        <!-- История игр -->
+        <div id="history" class="hidden">
+            <h2>История игр</h2>
+            <button onclick="hideHistory()">Назад</button>
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Имя</th>
+                        <th>Числа</th>
+                        <th>Ответ</th>
+                        <th>Результат</th>
+                        <th>Дата</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentGameId = null;
+
+        // Начало игры
+        async function startGame(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const answer = document.getElementById('answer').value;
+
+            try {
+                if (!currentGameId) {
+                    // Создаем новую игру
+                    const response = await fetch('/games', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            num1: Math.floor(Math.random() * 100) + 1,
+                            num2: Math.floor(Math.random() * 100) + 1
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    currentGameId = data.game_id;
+                    document.getElementById('num1').textContent = data.num1;
+                    document.getElementById('num2').textContent = data.num2;
+                }
+
+                // Проверяем ответ
+                const checkResponse = await fetch('/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        game_id: currentGameId,
+                        answer: answer
+                    })
+                });
+
+                const result = await checkResponse.json();
+                showResult(result);
+                currentGameId = null;
+
+            } catch (error) {
+                showMessage(error.message, true);
+            }
+        }
+
+        // Показать историю
+        async function showHistory() {
+            try {
+                const response = await fetch('/games');
+                const games = await response.json();
+                
+                const tbody = document.querySelector('#historyTable tbody');
+                tbody.innerHTML = '';
+                
+                games.forEach(game => {
+                    const row = `
+                        <tr>
+                            <td>${game.name}</td>
+                            <td>${game.num1} и ${game.num2}</td>
+                            <td>${game.user_answer ?? '-'}</td>
+                            <td>${game.result ? '✅' : '❌'}</td>
+                            <td>${new Date(game.played_at).toLocaleString()}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+                
+                document.getElementById('gameForm').classList.add('hidden');
+                document.getElementById('history').classList.remove('hidden');
+                
+            } catch (error) {
+                showMessage('Ошибка загрузки истории', true);
+            }
+        }
+
+        // Вспомогательные функции
+        function hideHistory() {
+            document.getElementById('history').classList.add('hidden');
+            document.getElementById('gameForm').classList.remove('hidden');
+        }
+
+        function showResult(result) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = result.result ? 'success' : 'error';
+            resultDiv.innerHTML = result.result 
+                ? `Правильно! НОД равен ${result.correct}`
+                : `Неверно! Правильный ответ: ${result.correct}`;
+        }
+
+        function showMessage(message, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = isError ? 'error' : 'success';
+            resultDiv.textContent = message;
+        }
+    </script>
+</body>
+</html>
